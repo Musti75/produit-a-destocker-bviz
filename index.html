@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Stock & Décotes Universel</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <!-- Notification Toast de Copie -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-300 bg-gray-900 text-white dark:bg-white dark:text-gray-900 px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 text-sm font-medium">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 dark:text-emerald-600"></i>
+        <span id="toastText">Référence copiée !</span>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        
+        <!-- En-tête -->
+        <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-3 text-gray-900 dark:text-white">
+                    <i data-lucide="package-search" class="w-8 h-8 text-brand-500"></i>
+                    Dashboard Stock & Décotes
+                </h1>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">Glissez votre fichier CSV pour analyser vos données de stock instantanément.</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <button id="themeToggle" class="p-2.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="moon" class="w-5 h-5 block dark:hidden"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Zone de Drop CSV -->
+        <div id="dropZone" class="border-2 border-dashed border-gray-300 dark:border-slate-700 hover:border-brand-500 dark:hover:border-brand-500 bg-white dark:bg-slate-800/50 rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 shadow-sm group">
+            <input type="file" id="fileInput" accept=".csv" class="hidden">
+            <div class="flex flex-col items-center gap-3">
+                <div class="p-4 rounded-full bg-brand-50 dark:bg-slate-700/50 text-brand-500 group-hover:scale-110 transition-transform duration-200">
+                    <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+                </div>
+                <div>
+                    <p class="text-base font-semibold text-gray-800 dark:text-slate-200">Glissez-déposez votre fichier CSV ici</p>
+                    <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">ou cliquez pour parcourir vos fichiers</p>
+                </div>
+                <span id="fileNameDisplay" class="text-xs font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-slate-700 px-3 py-1.5 rounded-full hidden"></span>
+            </div>
+        </div>
+
+        <!-- Cartes Indicateurs (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Total Décotes -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Total Décotes</p>
+                    <h3 id="kpiTotalDecotes" class="text-2xl font-bold text-orange-500 mt-1">0 €</h3>
+                    <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">économies cumulées</p>
+                </div>
+                <div class="p-3 bg-orange-50 dark:bg-orange-500/10 text-orange-500 rounded-xl">
+                    <i data-lucide="tag" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Quantité Stock -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Stock Physique</p>
+                    <h3 id="kpiTotalQte" class="text-2xl font-bold text-emerald-500 mt-1">0</h3>
+                    <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">unités en stock</p>
+                </div>
+                <div class="p-3 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 rounded-xl">
+                    <i data-lucide="boxes" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Articles Uniques -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Articles Uniques</p>
+                    <h3 id="kpiTotalArticles" class="text-2xl font-bold text-brand-500 mt-1">0</h3>
+                    <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">références listées</p>
+                </div>
+                <div class="p-3 bg-brand-50 dark:bg-brand-500/10 text-brand-500 rounded-xl">
+                    <i data-lucide="barcode" class="w-6 h-6"></i>
+                </div>
+            </div>
+
+            <!-- Rayons / Familles -->
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-gray-400 dark:text-slate-400 uppercase tracking-wider">Rayons / Familles</p>
+                    <h3 id="kpiTotalRayons" class="text-2xl font-bold text-purple-500 mt-1">0</h3>
+                    <p class="text-xs text-gray-400 dark:text-slate-500 mt-1">catégories uniques</p>
+                </div>
+                <div class="p-3 bg-purple-50 dark:bg-purple-500/10 text-purple-500 rounded-xl">
+                    <i data-lucide="layers" class="w-6 h-6"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barre de Filtres & Recherche -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60 space-y-4">
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <!-- Recherche textuelle -->
+                <div class="relative w-full md:w-80">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="searchInput" placeholder="Rechercher produit, code, rayon..." class="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-brand-500 dark:focus:border-brand-500 transition-colors">
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                    <!-- Filtre Rayon -->
+                    <select id="filterRayon" class="px-3 py-2 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-brand-500 transition-colors">
+                        <option value="">Tous les rayons</option>
+                    </select>
+
+                    <!-- Filtre Taux Décote -->
+                    <select id="filterDecote" class="px-3 py-2 bg-gray-50 dark:bg-slate-700/50 border border-gray-200 dark:border-slate-600 rounded-xl text-sm focus:outline-none focus:border-brand-500 transition-colors">
+                        <option value="">Toutes les décotes</option>
+                        <option value="50">Décote ≥ 50%</option>
+                        <option value="70">Décote ≥ 70%</option>
+                        <option value="85">Décote ≥ 85%</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Filtres par Cases à Cocher (Cycles / Statuts du pire au meilleur) -->
+            <div class="pt-3 border-t border-gray-100 dark:border-slate-700/60">
+                <p class="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-2.5">Filtrer par Cycle / Statut (Pire ➔ Meilleur) :</p>
+                <div id="cycleCheckboxes" class="flex flex-wrap gap-2 sm:gap-3 text-sm">
+                    <span class="text-xs text-gray-400 italic">Chargez un fichier CSV pour afficher les cycles disponibles</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau des données -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700/60 overflow-hidden">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse min-w-[900px]">
+                    <thead>
+                        <tr class="bg-gray-50/80 dark:bg-slate-700/40 text-gray-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider border-b border-gray-100 dark:border-slate-700">
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none" onclick="sortTable(0)">
+                                <div class="flex items-center gap-1.5">Rayon <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none" onclick="sortTable(1)">
+                                <div class="flex items-center gap-1.5">Produit <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none text-center" onclick="sortTable(2)">
+                                <div class="flex items-center justify-center gap-1.5">Tx Décote <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none text-right" onclick="sortTable(3)">
+                                <div class="flex items-center justify-end gap-1.5">Décote <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none text-right" onclick="sortTable(4)">
+                                <div class="flex items-center justify-end gap-1.5">Stock 360 <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none text-right" onclick="sortTable(5)">
+                                <div class="flex items-center justify-end gap-1.5">Stock FF/NN <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none text-center" onclick="sortTable(6)">
+                                <div class="flex items-center justify-center gap-1.5">Qté Stock <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                            <th class="py-3.5 px-4 cursor-pointer hover:text-brand-500 transition-colors select-none text-center" onclick="sortTable(7)">
+                                <div class="flex items-center justify-center gap-1.5">Cycle <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-gray-100 dark:divide-slate-700/60 text-sm">
+                        <tr>
+                            <td colspan="8" class="py-12 text-center text-gray-400 dark:text-slate-500">
+                                Aucun fichier CSV chargé. Veuillez importer vos données ci-dessus.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="tableFooter" class="px-6 py-3 bg-gray-50/50 dark:bg-slate-700/20 text-xs text-gray-500 dark:text-slate-400 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center">
+                <span>Affichage de <strong id="rowCount" class="text-gray-700 dark:text-slate-200">0</strong> éléments</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Application -->
+    <script>
+        // Gestion du Thème Sombre / Clair
+        const themeToggleBtn = document.getElementById('themeToggle');
+        themeToggleBtn.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+
+        // Initialisation des icônes
+        lucide.createIcons();
+
+        // Variables Globales
+        let stockData = [];
+        let filteredData = [];
+        let sortDirection = {};
+        let selectedCycles = new Set();
+
+        // Ordre strict du PIRE au MEILLEUR statut
+        const cyclePriorityOrder = ['NZ', 'TM', 'TZ', 'NN', 'FF', 'FI', 'FR', 'AC'];
+
+        // Dictionnaire des libellés de cycles/statuts
+        const cycleLabels = {
+            'NZ': 'NZ (Hors Gamme / Inconnu)',
+            'TM': 'TM (Terminé)',
+            'TZ': 'TZ (Hors Gamme)',
+            'NN': 'NN (Fin de Produit)',
+            'FF': 'FF (Fin de Fab)',
+            'FI': 'FI (Fin Inv)',
+            'FR': 'FR (Fin Réappro)',
+            'AC': 'AC (Actif)'
+        };
+
+        // Éléments du DOM
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const tableBody = document.getElementById('tableBody');
+        const searchInput = document.getElementById('searchInput');
+        const filterRayon = document.getElementById('filterRayon');
+        const filterDecote = document.getElementById('filterDecote');
+        const cycleCheckboxesContainer = document.getElementById('cycleCheckboxes');
+
+        // Événements Drag & Drop
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-brand-500', 'bg-brand-50/50', 'dark:bg-slate-700/60');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-brand-500', 'bg-brand-50/50', 'dark:bg-slate-700/60');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-brand-500', 'bg-brand-50/50', 'dark:bg-slate-700/60');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function cleanString(str) {
+            if (!str) return '';
+            return str.toString().replace(/[\u00A0\u1680\u180E\u2000-\u200B\u202F\u205F\u3000]/g, ' ').trim();
+        }
+
+        function parseNumber(val) {
+            if (val === null || val === undefined) return 0;
+            let str = val.toString().replace(/[\u00A0\s]/g, '').replace('€', '').replace('%', '').replace(',', '.').trim();
+            let num = parseFloat(str);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatMoney(num) {
+            return num ? `${num.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €` : '';
+        }
+
+        function copyRef(text) {
+            const match = text.match(/\b\d{6,14}\b/);
+            const refToCopy = match ? match[0] : text;
+
+            navigator.clipboard.writeText(refToCopy).then(() => {
+                showToast(`Copié : ${refToCopy}`);
+            }).catch(() => {
+                const tempInput = document.createElement('input');
+                tempInput.value = refToCopy;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+                showToast(`Copié : ${refToCopy}`);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastText = document.getElementById('toastText');
+            toastText.textContent = message;
+            toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+
+        function handleFile(file) {
+            fileNameDisplay.textContent = file.name;
+            fileNameDisplay.classList.remove('hidden');
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                parseCSV(e.target.result);
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) return;
+
+            const firstLine = lines[0];
+            const sep = firstLine.includes(';') ? ';' : ',';
+            const headers = firstLine.split(sep).map(h => cleanString(h).toLowerCase());
+
+            const findCol = (keys) => headers.findIndex(h => keys.some(k => h.includes(k)));
+
+            const idxRayon = findCol(['rayon']);
+            const idxProduit = findCol(['produit', 'libelle', 'article', 'code']);
+            const idxTxDecote = findCol(['tx décote', 'tx decote', 'taux décote', 'taux decote', 'décote %']);
+            const idxDecote = findCol(['décote', 'decote', 'montant décote']);
+            const idxStock360 = findCol(['stock 360', '360']);
+            const idxStockFFNN = findCol(['stock ff/nn', 'ff/nn']);
+            const idxQte = findCol(['qte', 'quantite', 'quantité', 'stock physique']);
+            const idxCycle = findCol(['cycle', 'cycle de vie', 'statut']);
+
+            stockData = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const row = lines[i].split(sep).map(cell => cleanString(cell.replace(/^"|"$/g, '')));
+                if (row.length < 2) continue;
+
+                const rayon = idxRayon !== -1 ? row[idxRayon] : '';
+                const produit = idxProduit !== -1 ? row[idxProduit] : '';
+                const txDecote = idxTxDecote !== -1 ? row[idxTxDecote] : '';
+                const decoteVal = idxDecote !== -1 ? parseNumber(row[idxDecote]) : 0;
+                const stock360Val = idxStock360 !== -1 ? parseNumber(row[idxStock360]) : 0;
+                const stockFFNNVal = idxStockFFNN !== -1 ? parseNumber(row[idxStockFFNN]) : 0;
+                const qteVal = idxQte !== -1 ? parseNumber(row[idxQte]) : 0;
+                const cycle = idxCycle !== -1 ? row[idxCycle].toUpperCase() : '';
+
+                if (produit || rayon) {
+                    stockData.push({
+                        rayon,
+                        produit,
+                        txDecote,
+                        txDecoteNum: parseNumber(txDecote),
+                        decote: decoteVal,
+                        stock360: stock360Val,
+                        stockFFNN: stockFFNNVal,
+                        qte: qteVal,
+                        cycle
+                    });
+                }
+            }
+
+            populateRayonFilter();
+            generateCycleCheckboxes();
+            applyFilters();
+        }
+
+        function populateRayonFilter() {
+            const rayons = [...new Set(stockData.map(d => d.rayon).filter(Boolean))].sort();
+            filterRayon.innerHTML = '<option value="">Tous les rayons</option>';
+            rayons.forEach(r => {
+                const opt = document.createElement('option');
+                opt.value = r;
+                opt.textContent = r;
+                filterRayon.appendChild(opt);
+            });
+        }
+
+        function generateCycleCheckboxes() {
+            const cyclesPresent = [...new Set(stockData.map(d => d.cycle).filter(Boolean))];
+            
+            // Tri des cases à cocher selon l'ordre strict : NZ -> TM -> NN -> FF -> FI -> FR -> AC
+            cyclesPresent.sort((a, b) => {
+                let idxA = cyclePriorityOrder.indexOf(a);
+                let idxB = cyclePriorityOrder.indexOf(b);
+                if (idxA === -1) idxA = 99;
+                if (idxB === -1) idxB = 99;
+                return idxA - idxB;
+            });
+
+            selectedCycles = new Set(cyclesPresent);
+
+            if (cyclesPresent.length === 0) {
+                cycleCheckboxesContainer.innerHTML = `<span class="text-xs text-gray-400 italic">Aucun statut trouvé dans le fichier.</span>`;
+                return;
+            }
+
+            cycleCheckboxesContainer.innerHTML = cyclesPresent.map(code => {
+                const label = cycleLabels[code] || code;
+                return `
+                    <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40 text-xs font-semibold cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors select-none">
+                        <input type="checkbox" value="${code}" checked class="cycle-checkbox w-4 h-4 text-brand-600 rounded border-gray-300 dark:border-slate-600 focus:ring-brand-500">
+                        <span>${label}</span>
+                    </label>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.cycle-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedCycles.add(e.target.value);
+                    } else {
+                        selectedCycles.delete(e.target.value);
+                    }
+                    applyFilters();
+                });
+            });
+        }
+
+        function applyFilters() {
+            const query = searchInput.value.toLowerCase().trim();
+            const selectedRayon = filterRayon.value;
+            const selectedDecote = parseNumber(filterDecote.value);
+
+            filteredData = stockData.filter(d => {
+                const matchQuery = !query || d.produit.toLowerCase().includes(query) || d.rayon.toLowerCase().includes(query);
+                const matchRayon = !selectedRayon || d.rayon === selectedRayon;
+                const matchCycle = selectedCycles.size === 0 || selectedCycles.has(d.cycle);
+                const matchDecote = !selectedDecote || d.txDecoteNum >= selectedDecote;
+                return matchQuery && matchRayon && matchCycle && matchDecote;
+            });
+
+            updateKPIs();
+            renderTable();
+        }
+
+        function updateKPIs() {
+            const totalDecotes = filteredData.reduce((acc, curr) => acc + (curr.decote * (curr.qte || 1)), 0);
+            const totalQte = filteredData.reduce((acc, curr) => acc + curr.qte, 0);
+            const totalArticles = filteredData.length;
+            const totalRayons = new Set(filteredData.map(d => d.rayon).filter(Boolean)).size;
+
+            document.getElementById('kpiTotalDecotes').textContent = formatMoney(totalDecotes) || '0 €';
+            document.getElementById('kpiTotalQte').textContent = totalQte.toLocaleString('fr-FR');
+            document.getElementById('kpiTotalArticles').textContent = totalArticles.toLocaleString('fr-FR');
+            document.getElementById('kpiTotalRayons').textContent = totalRayons.toLocaleString('fr-FR');
+            document.getElementById('rowCount').textContent = totalArticles.toLocaleString('fr-FR');
+        }
+
+        function renderTable() {
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-12 text-center text-gray-400 dark:text-slate-500">
+                            Aucun élément ne correspond à votre recherche.
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = filteredData.map(d => {
+                let badgeStyle = 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300 border border-gray-200 dark:border-slate-600';
+                
+                // AC, FR -> Vert
+                if (d.cycle === 'AC' || d.cycle === 'FR') {
+                    badgeStyle = 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800';
+                }
+                // FI -> Orange
+                else if (d.cycle === 'FI') {
+                    badgeStyle = 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-800';
+                }
+                // FF, NN -> Rouge
+                else if (d.cycle === 'FF' || d.cycle === 'NN') {
+                    badgeStyle = 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-800';
+                }
+                // NZ, TM, TZ -> Neutre/Sombre
+                else if (d.cycle === 'NZ' || d.cycle === 'TM' || d.cycle === 'TZ') {
+                    badgeStyle = 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600';
+                }
+
+                const safeProduit = d.produit.replace(/'/g, "\\'");
+
+                return `
+                    <tr class="hover:bg-gray-50/80 dark:hover:bg-slate-700/30 transition-colors">
+                        <td class="py-3 px-4 text-xs font-medium text-gray-500 dark:text-slate-400">${d.rayon}</td>
+                        <td class="py-3 px-4 font-medium text-gray-900 dark:text-slate-100">
+                            <button onclick="copyRef('${safeProduit}')" class="group/btn text-left flex items-center gap-2 hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer" title="Cliquer pour copier le code de référence">
+                                <span>${d.produit}</span>
+                                <i data-lucide="copy" class="w-3.5 h-3.5 opacity-0 group-hover/btn:opacity-100 text-brand-500 transition-opacity"></i>
+                            </button>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            ${d.txDecote ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">${d.txDecote}</span>` : ''}
+                        </td>
+                        <td class="py-3 px-4 text-right font-medium text-orange-600 dark:text-orange-400">${formatMoney(d.decote)}</td>
+                        <td class="py-3 px-4 text-right text-gray-700 dark:text-slate-300">${formatMoney(d.stock360)}</td>
+                        <td class="py-3 px-4 text-right text-gray-700 dark:text-slate-300">${formatMoney(d.stockFFNN)}</td>
+                        <td class="py-3 px-4 text-center font-semibold text-gray-900 dark:text-slate-100">${d.qte}</td>
+                        <td class="py-3 px-4 text-center">
+                            ${d.cycle ? `<span class="px-2.5 py-1 rounded-md text-xs font-bold ${badgeStyle}">${d.cycle}</span>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function sortTable(columnIndex) {
+            const keys = ['rayon', 'produit', 'txDecoteNum', 'decote', 'stock360', 'stockFFNN', 'qte', 'cycle'];
+            const key = keys[columnIndex];
+
+            sortDirection[key] = !sortDirection[key];
+
+            filteredData.sort((a, b) => {
+                let valA = a[key];
+                let valB = b[key];
+
+                if (key === 'cycle') {
+                    let idxA = cyclePriorityOrder.indexOf(valA);
+                    let idxB = cyclePriorityOrder.indexOf(valB);
+                    if (idxA === -1) idxA = 99;
+                    if (idxB === -1) idxB = 99;
+                    return sortDirection[key] ? idxA - idxB : idxB - idxA;
+                }
+
+                if (typeof valA === 'string') {
+                    return sortDirection[key] ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return sortDirection[key] ? valA - valB : valB - valA;
+            });
+
+            renderTable();
+        }
+
+        searchInput.addEventListener('input', applyFilters);
+        filterRayon.addEventListener('change', applyFilters);
+        filterDecote.addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>
